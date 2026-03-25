@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Tour de Bierchen</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#f8f6f2;--bg2:#ffffff;--bg3:#f2ede6;
+    --copper:#b5712a;--copper-l:#d4924a;--copper-d:#8a5218;--copper-bg:#fdf5eb;
+    --text:#1a1612;--text-2:#4a3f32;--text-m:#9a8a78;
+    --border:#e8dfd0;--border-s:#d4c4b0;
+    --success:#2e7d3c;--success-bg:#edf7ef;--success-b:#b8dfc0;
+    --danger:#c0392b;--danger-bg:#fdf0ee;--danger-b:#f0c0ba;
+    --shadow:0 1px 4px rgba(100,70,30,.08),0 4px 16px rgba(100,70,30,.06);
+    --radius:12px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;}
+  #app{width:100%;max-width:460px;padding:0 0 40px;}
+
+  .header{background:var(--bg2);border-bottom:1px solid var(--border);padding:18px 20px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 1px 8px rgba(100,70,30,.06);position:sticky;top:0;z-index:10;}
+  .header-icon{font-size:1.9rem;line-height:1;}
+  .header-text{flex:1;}
+  .header h1{font-family:'Inter',sans-serif;font-size:1.45rem;font-weight:900;color:var(--copper-d);letter-spacing:0.3px;line-height:1.1;}
+  .header .subtitle{font-size:0.76rem;color:var(--text-m);margin-top:2px;font-style:italic;font-weight:300;}
+  .menu-btn{background:transparent;border:1.5px solid var(--border-s);border-radius:8px;padding:7px 11px;cursor:pointer;color:var(--text-2);font-size:0.7rem;font-weight:600;letter-spacing:0.5px;transition:all .18s;white-space:nowrap;flex-shrink:0;font-family:'Inter',sans-serif;order:-1;}
+  .menu-btn:hover,.menu-btn.active{border-color:var(--copper);color:var(--copper);background:var(--copper-bg);}
+
+  /* DRAWER */
+  .drawer-overlay{position:fixed;inset:0;z-index:50;pointer-events:none;}
+  .drawer-overlay.open{pointer-events:all;}
+  .drawer-backdrop{position:absolute;inset:0;background:rgba(26,22,18,0);transition:background .25s ease;}
+  .drawer-overlay.open .drawer-backdrop{background:rgba(26,22,18,.45);}
+  .drawer{position:absolute;top:0;left:0;bottom:0;width:280px;max-width:80vw;background:var(--bg2);border-right:1px solid var(--border);box-shadow:4px 0 24px rgba(100,70,30,.15);transform:translateX(-100%);transition:transform .28s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;overflow:hidden;}
+  .drawer-overlay.open .drawer{transform:translateX(0);}
+  .drawer-header{padding:20px 18px 14px;border-bottom:1px solid var(--border);background:var(--copper-bg);}
+  .drawer-title{font-family:'Inter',sans-serif;font-size:1rem;font-weight:800;color:var(--copper-d);}
+  .drawer-sub{font-size:0.72rem;color:var(--text-m);margin-top:2px;}
+  .drawer-body{flex:1;overflow-y:auto;padding:12px 10px;}
+  .ov-list{display:flex;flex-direction:column;gap:7px;}
+  .ov-item{display:flex;align-items:center;gap:11px;padding:12px 14px;border-radius:9px;border:1.5px solid var(--border);background:var(--bg2);cursor:pointer;transition:all .18s;}
+  .ov-item:hover{border-color:var(--copper-l);background:var(--copper-bg);}
+  .ov-item.is-done{border-color:var(--success-b);background:var(--success-bg);}
+  .ov-item.is-active{border-color:var(--copper);background:var(--copper-bg);}
+  .ov-num{font-size:0.95rem;font-weight:700;color:var(--text-m);min-width:20px;}
+  .ov-item.is-done .ov-num{color:var(--success);}
+  .ov-item.is-active .ov-num{color:var(--copper);}
+  .ov-info{flex:1;}
+  .ov-name{font-size:0.84rem;font-weight:600;color:var(--text);}
+  .ov-status{font-size:0.7rem;color:var(--text-m);margin-top:1px;}
+  .ov-item.is-done .ov-status{color:var(--success);}
+  .ov-item.is-active .ov-status{color:var(--copper);}
+  .ov-icon{font-size:0.95rem;}
+
+  .content{padding:18px 16px 0;}
+
+  .progress-section{margin-bottom:16px;}
+  .progress-label{font-size:0.65rem;font-weight:600;letter-spacing:1.5px;color:var(--text-m);text-transform:uppercase;margin-bottom:7px;display:flex;justify-content:space-between;}
+  .progress-steps{display:flex;gap:4px;}
+  .step-dot{flex:1;height:5px;border-radius:3px;background:var(--border);transition:background .4s ease;}
+  .step-dot.done{background:var(--success);}
+  .step-dot.active{background:var(--copper);}
+  .step-dot.quiz{background:var(--copper-l);}
+
+  .gps-status{display:inline-flex;align-items:center;gap:7px;font-size:0.73rem;font-weight:500;padding:5px 12px;border-radius:20px;background:var(--bg2);border:1px solid var(--border);margin-bottom:16px;color:var(--text-m);box-shadow:var(--shadow);}
+  .gps-dot{width:7px;height:7px;border-radius:50%;background:var(--text-m);flex-shrink:0;}
+  .gps-dot.active{background:var(--success);box-shadow:0 0 6px rgba(46,125,60,.5);animation:pulse 2s infinite;}
+  .gps-dot.error{background:var(--danger);}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+
+  .card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:22px 20px;margin-bottom:14px;box-shadow:var(--shadow);position:relative;}
+  .card-accent{position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--copper-d),var(--copper-l));border-radius:var(--radius) var(--radius) 0 0;}
+  .card-accent.green{background:linear-gradient(90deg,var(--success),#56c46a);}
+  .card-accent.amber{background:linear-gradient(90deg,#c87020,var(--copper-l));}
+  .card-accent.pink{background:linear-gradient(90deg,#c0297b,#e05090);}
+
+  .station-tag{display:inline-block;font-size:0.62rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--copper);background:var(--copper-bg);border:1px solid rgba(181,113,42,.2);border-radius:4px;padding:3px 8px;margin-bottom:10px;}
+  .station-tag.amber{color:#a05010;background:#fef8f0;border-color:rgba(181,113,42,.3);}
+  .station-tag.green{color:var(--success);background:var(--success-bg);border-color:var(--success-b);}
+
+  .card-title{font-size:1.1rem;font-weight:800;color:var(--text);margin-bottom:12px;line-height:1.3;}
+  .nav-hint{font-size:0.9rem;line-height:1.65;color:var(--text-2);font-style:italic;background:var(--bg3);border-left:3px solid var(--copper);padding:10px 14px;border-radius:0 6px 6px 0;margin-bottom:18px;}
+
+  .nav-widget{display:grid;grid-template-columns:1fr auto;align-items:center;gap:16px;padding:16px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;}
+  .nav-left{display:flex;flex-direction:column;gap:4px;}
+  .dist-value{font-size:2.1rem;font-weight:800;color:var(--copper-d);transition:color .4s;line-height:1;}
+  .dist-value.near{color:#c07828;}
+  .dist-value.close{color:var(--success);}
+  .dist-label{font-size:0.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-m);}
+  .warmth-row{display:flex;gap:2px;margin-top:6px;font-size:1.2rem;line-height:1;}
+
+  .compass-wrap{display:flex;flex-direction:column;align-items:center;gap:5px;}
+  .compass-ring{width:68px;height:68px;border-radius:50%;border:1.5px solid var(--border-s);background:var(--bg2);box-shadow:inset 0 1px 4px rgba(100,70,30,.08);display:flex;align-items:center;justify-content:center;position:relative;}
+  .compass-ring::before{content:'';position:absolute;inset:5px;border-radius:50%;background:linear-gradient(0deg,transparent 47%,rgba(181,113,42,.35) 47%,rgba(181,113,42,.35) 53%,transparent 53%),linear-gradient(90deg,transparent 47%,rgba(181,113,42,.15) 47%,rgba(181,113,42,.15) 53%,transparent 53%);}
+  .compass-labels{position:absolute;inset:0;pointer-events:none;}
+  .cl{position:absolute;font-size:.5rem;font-weight:700;color:rgba(181,113,42,.6);}
+  .cl-n{top:3px;left:50%;transform:translateX(-50%);}
+  .cl-s{bottom:3px;left:50%;transform:translateX(-50%);}
+  .cl-e{right:4px;top:50%;transform:translateY(-50%);}
+  .cl-w{left:4px;top:50%;transform:translateY(-50%);}
+  .compass-dir{font-size:0.68rem;font-weight:600;color:var(--copper);text-align:center;min-width:62px;letter-spacing:0.3px;}
+
+  .reveal-btn{width:100%;padding:11px;border-radius:8px;border:1.5px solid var(--copper);cursor:pointer;background:var(--copper-bg);font-family:'Inter',sans-serif;font-size:0.85rem;font-weight:700;color:var(--copper-d);transition:all .18s;margin-top:14px;}
+  .reveal-btn:hover{background:var(--copper);color:#fff;}
+  .reveal-name{margin-top:14px;padding:12px 15px;background:var(--success-bg);border:1.5px solid var(--success-b);border-radius:8px;font-size:1rem;font-weight:700;color:var(--success);text-align:center;animation:fadeIn .35s ease;}
+
+  .quiz-question{font-size:.97rem;line-height:1.7;color:var(--text-2);margin-bottom:18px;padding:13px 15px;background:var(--copper-bg);border-left:3px solid var(--copper);border-radius:0 6px 6px 0;}
+  .quiz-options{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
+  .quiz-option{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--bg2);border:1.5px solid var(--border);border-radius:8px;cursor:pointer;transition:all .18s;text-align:left;color:var(--text);font-family:'Inter',sans-serif;font-size:.9rem;width:100%;box-shadow:0 1px 3px rgba(100,70,30,.05);}
+  .quiz-option:hover:not([disabled]){border-color:var(--copper);background:var(--copper-bg);}
+  .quiz-option .option-key{font-size:.75rem;font-weight:700;color:var(--copper);min-width:16px;}
+  .quiz-option.sel-wrong{background:var(--danger-bg);border-color:var(--danger-b);animation:shake .4s ease;}
+  .quiz-option.sel-correct{background:var(--success-bg);border-color:var(--success-b);}
+  @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+
+  .feedback{padding:10px 14px;border-radius:8px;font-size:.85rem;font-weight:500;margin-top:4px;animation:fadeIn .3s ease;}
+  .feedback.wrong{background:var(--danger-bg);border:1px solid var(--danger-b);color:var(--danger);}
+  .feedback.correct{background:var(--success-bg);border:1px solid var(--success-b);color:var(--success);}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+  .card.unlocked{border-color:var(--success-b);box-shadow:0 0 0 3px rgba(46,125,60,.1);}
+
+  /* INTERMISSION */
+  .inter-card{text-align:center;padding:44px 20px 36px;}
+  .inter-emoji{font-size:4.5rem;display:block;margin-bottom:18px;animation:popIn .5s cubic-bezier(.34,1.56,.64,1);}
+  @keyframes popIn{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+  .inter-title{font-size:1.6rem;font-weight:900;color:var(--text);margin-bottom:24px;}
+  .big-btn{width:100%;padding:14px;border-radius:10px;border:none;cursor:pointer;font-family:'Inter',sans-serif;font-size:1rem;font-weight:700;transition:all .2s;}
+  .big-btn.copper{background:linear-gradient(135deg,var(--copper-d),var(--copper-l));color:#fff;box-shadow:0 4px 14px rgba(181,113,42,.35);}
+  .big-btn.copper:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(181,113,42,.45);}
+  .big-btn.pink{background:linear-gradient(135deg,#c0297b,#e05090);color:#fff;box-shadow:0 4px 14px rgba(192,41,123,.35);}
+  .big-btn.pink:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(192,41,123,.45);}
+
+  /* POLL */
+  .poll-options{display:flex;flex-direction:column;gap:10px;margin-top:18px;}
+  .poll-option{display:flex;align-items:center;gap:14px;padding:16px 18px;background:var(--bg2);border:2px solid var(--border);border-radius:10px;cursor:pointer;transition:all .2s;font-family:'Inter',sans-serif;font-size:1rem;width:100%;}
+  .poll-option:hover{border-color:var(--copper);background:var(--copper-bg);transform:translateX(3px);}
+  .poll-emoji{font-size:1.8rem;line-height:1;}
+  .poll-key{font-size:.75rem;font-weight:700;color:var(--copper);min-width:16px;}
+
+  /* BIRTHDAY */
+  .bday-card{text-align:center;padding:50px 20px 40px;}
+  .bday-emoji{font-size:3.5rem;display:block;margin-bottom:6px;animation:popIn .5s cubic-bezier(.34,1.56,.64,1);}
+  .bday-title{font-size:1.5rem;font-weight:900;color:#c0297b;line-height:1.3;animation:fadeIn .6s .3s both ease;}
+  .bday-sub{font-size:.9rem;color:var(--text-m);margin-top:12px;font-style:italic;animation:fadeIn .6s .6s both ease;}
+  .confetti{position:fixed;inset:0;pointer-events:none;z-index:200;}
+
+  /* FINISH */
+  .finish-card{text-align:center;padding:36px 20px;}
+  .finish-icon{font-size:3.5rem;margin-bottom:14px;display:block;}
+  .finish-title{font-size:1.45rem;font-weight:900;color:var(--copper-d);margin-bottom:10px;}
+  .finish-text{font-size:.9rem;color:var(--text-m);line-height:1.65;font-style:italic;}
+
+  .err-box{background:var(--danger-bg);border:1px solid var(--danger-b);border-radius:8px;padding:12px 15px;margin-bottom:14px;font-size:.85rem;color:var(--danger);}
+  .dbg{background:#f0ebe3;border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:14px;font-size:.7rem;font-family:monospace;color:var(--text-m);line-height:1.9;}
+  .dbg strong{color:var(--copper-d);}
+
+  .footer{margin-top:16px;display:flex;justify-content:center;gap:8px;flex-wrap:wrap;}
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 15px;border-radius:8px;border:1.5px solid var(--border);cursor:pointer;background:var(--bg2);font-family:'Inter',sans-serif;font-size:.7rem;font-weight:600;letter-spacing:.3px;color:var(--text-m);transition:all .18s;}
+  .btn:hover{border-color:var(--copper-l);color:var(--copper);background:var(--copper-bg);}
+
+  .modal-overlay{position:fixed;inset:0;z-index:100;background:rgba(26,22,18,.5);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .2s ease;}
+  .modal{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:28px 24px;width:100%;max-width:340px;box-shadow:0 8px 40px rgba(100,70,30,.2);position:relative;overflow:hidden;}
+  .modal::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--copper-d),var(--copper-l));}
+  .modal-title{font-size:1.05rem;font-weight:800;color:var(--text);margin-bottom:4px;}
+  .modal-sub{font-size:.82rem;color:var(--text-m);margin-bottom:20px;font-style:italic;}
+  .modal-input{width:100%;padding:12px 16px;background:var(--bg3);border:1.5px solid var(--border-s);border-radius:8px;color:var(--text);font-family:'Inter',sans-serif;font-size:1rem;font-weight:600;letter-spacing:4px;text-align:center;text-transform:uppercase;margin-bottom:12px;outline:none;transition:border-color .2s;}
+  .modal-input:focus{border-color:var(--copper);background:var(--bg2);}
+  .modal-input.error{border-color:var(--danger);animation:shake .4s ease;}
+  .modal-err{color:var(--danger);font-size:.8rem;margin-bottom:12px;text-align:center;animation:fadeIn .3s ease;}
+  .modal-btns{display:flex;gap:8px;}
+  .modal-btn{flex:1;padding:11px;border-radius:8px;border:none;cursor:pointer;font-family:'Inter',sans-serif;font-size:.78rem;font-weight:600;letter-spacing:.3px;transition:all .18s;}
+  .modal-btn.ok{background:linear-gradient(135deg,var(--copper-d),var(--copper-l));color:white;box-shadow:0 3px 10px rgba(181,113,42,.3);}
+  .modal-btn.ok:hover{transform:translateY(-1px);box-shadow:0 5px 14px rgba(181,113,42,.4);}
+  .modal-btn.cancel{background:var(--bg3);color:var(--text-m);border:1px solid var(--border);}
+  .modal-btn.cancel:hover{color:var(--text);border-color:var(--border-s);}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <button class="menu-btn" id="menuBtn" onclick="toggleOverview()">☰ Orte</button>
+    <div class="header-icon">🍻</div>
+    <div class="header-text">
+      <h1>Tour de Bierchen</h1>
+      <div class="subtitle">Volle Promille voraus</div>
+    </div>
+  </div>
+  <div class="content"><div id="root"></div></div>
+</div>
+
+<div class="drawer-overlay" id="drawerOverlay" onclick="handleDrawerClick(event)">
+  <div class="drawer-backdrop"></div>
+  <div class="drawer" id="drawer">
+    <div class="drawer-header">
+      <div class="drawer-title">🍺 Alle Stationen</div>
+      <div class="drawer-sub">Passwort eingeben zum Einspringen</div>
+    </div>
+    <div class="drawer-body"><div class="ov-list" id="ovList"></div></div>
+  </div>
+</div>
+<div id="modal-root"></div>
+<canvas class="confetti" id="confettiCanvas"></canvas>
+
+<script>
+var RADIUS = 50;
+var STATIONS = [
+  {name:"Gutenbergplatz",navHint:"Navigiere zum Startpunkt der Tour.",lat:49.00917073657122,lng:8.375881148833534,password:"OBST",quiz:{question:"Bevor es flüssig wird, sollte eine solide Grundlage geschaffen werden. Welches Lebensmittel wäre hierfür gut geeignet?",options:[{key:"A",text:"Bier",correct:false},{key:"B",text:"Essiggurken",correct:false},{key:"C",text:"Obstgarten",correct:true}]}},
+  {name:"Braustübl Hatz-Moninger",navHint:"Navigiere zur nächsten Station.",lat:49.002995710719425,lng:8.356162519735054,password:"HOPF",quiz:{question:"Wie viele Liter Bier werden hier im Jahr gebraut?",options:[{key:"A",text:"1.000",correct:false},{key:"B",text:"10.000",correct:true},{key:"C",text:"100.000",correct:false}]}},
+  {name:"Kühler Krug",navHint:"Navigiere zur nächsten Station.",lat:49.00400239104205,lng:8.368214310201168,password:"KRUG",quiz:{question:"Wie viele Liter Bier werden hier im Jahr gebraut?",options:[{key:"A",text:"1.000",correct:false},{key:"B",text:"10.000",correct:true},{key:"C",text:"100.000",correct:false}]}},
+  {name:"Mount Klotz (Fächerbräu)",navHint:"Navigiere zur nächsten Station.",lat:48.99776950585412,lng:8.375251565574152,password:"KLOTZ",quiz:{question:"Wie viele Liter Bier werden hier im Jahr gebraut?",options:[{key:"A",text:"1.000",correct:false},{key:"B",text:"10.000",correct:true},{key:"C",text:"100.000",correct:false}]}},
+  {name:"Badisch Brauhaus",navHint:"Navigiere zur nächsten Station.",lat:49.01186091889893,lng:8.393798320816044,password:"FASS",quiz:{question:"Wie viele Liter Bier werden hier im Jahr gebraut?",options:[{key:"A",text:"1.000",correct:false},{key:"B",text:"10.000",correct:true},{key:"C",text:"100.000",correct:false}]}},
+  {name:"Wolfsbräu",navHint:"Navigiere zur nächsten Station.",lat:49.00184385450015,lng:8.407708091486858,password:"WOLF",quiz:{question:"Wie viele Liter Bier werden hier im Jahr gebraut?",options:[{key:"A",text:"1.000",correct:false},{key:"B",text:"10.000",correct:true},{key:"C",text:"100.000",correct:false}]}},
+  {name:"Pöbelbräu",navHint:"Navigiere zur nächsten Station.",lat:48.99829747949273,lng:8.408651652557714,password:"POEB",quiz:{question:"Wie viele Liter Bier werden hier im Jahr gebraut?",options:[{key:"A",text:"1.000",correct:false},{key:"B",text:"10.000",correct:true},{key:"C",text:"100.000",correct:false}]}},
+  {name:"Vogelbräu",navHint:"Navigiere zur nächsten Station.",lat:49.00745486314866,lng:8.413903395524406,password:"VOGEL",quiz:{question:"Wie viele Liter Bier werden hier im Jahr gebraut?",options:[{key:"A",text:"1.000",correct:false},{key:"B",text:"10.000",correct:true},{key:"C",text:"100.000",correct:false}]}},
+  {name:"Höpfner",navHint:"Navigiere zur nächsten Station.",lat:49.01233007959024,lng:8.426497877604646,password:"HOEP",quiz:{question:"Wie viele Liter Bier werden hier im Jahr gebraut?",options:[{key:"A",text:"1.000",correct:false},{key:"B",text:"10.000",correct:true},{key:"C",text:"100.000",correct:false}]}}
+];
+
+// Intermissions: triggered after completing station index X
+var INTERMISSIONS = {
+  0: {emoji:'🍓', title:'Frühstück',    btnLabel:'Jetzt weiterspielen', btnStyle:'copper'},
+  4: {emoji:'🍔', title:'Mittagessen',  btnLabel:'Jetzt weiterspielen', btnStyle:'copper'},
+  8: {emoji:'🥩', title:'Abendessen',   btnLabel:'Stimmung abfragen',   btnStyle:'pink'}
+};
+
+var state = {
+  step:0, phase:'nav', completedSteps:[], pwJumped:false,
+  gpsStatus:'idle', gpsError:null, lat:null, lng:null, accuracy:null,
+  distance:null, heading:null, selOpt:null, quizFb:null, attempts:0,
+  nameRevealed:false, showOv:false, debug:false,
+  modalStep:null, modalPw:'', modalErr:''
+};
+
+try{var sv=sessionStorage.getItem('tdb_v3');if(sv){var sp=JSON.parse(sv);state.step=sp.step||0;state.phase=sp.phase||'nav';state.completedSteps=sp.completedSteps||[];state.pwJumped=sp.pwJumped||false;}}catch(e){}
+
+function persist(){try{sessionStorage.setItem('tdb_v3',JSON.stringify({step:state.step,phase:state.phase,completedSteps:state.completedSteps,pwJumped:state.pwJumped}));}catch(e){}}
+
+// GEO
+function haversine(la1,lo1,la2,lo2){var R=6371000,d=function(x){return x*Math.PI/180;};var dL=d(la2-la1),dO=d(lo2-lo1);var a=Math.sin(dL/2)*Math.sin(dL/2)+Math.cos(d(la1))*Math.cos(d(la2))*Math.sin(dO/2)*Math.sin(dO/2);return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}
+function calcHeading(la1,lo1,la2,lo2){var d=function(x){return x*Math.PI/180;};var y=Math.sin(d(lo2-lo1))*Math.cos(d(la2));var x=Math.cos(d(la1))*Math.sin(d(la2))-Math.sin(d(la1))*Math.cos(d(la2))*Math.cos(d(lo2-lo1));return(Math.atan2(y,x)*180/Math.PI+360)%360;}
+function dirName(deg){return['Nord','Nordost','Ost','Südost','Süd','Südwest','West','Nordwest'][Math.round(deg/45)%8];}
+
+function startGPS(){
+  if(!navigator.geolocation){state.gpsStatus='error';state.gpsError='GPS nicht verfügbar.';render();return;}
+  state.gpsStatus='active';render();
+  navigator.geolocation.watchPosition(
+    function(pos){state.lat=pos.coords.latitude;state.lng=pos.coords.longitude;state.accuracy=Math.round(pos.coords.accuracy);state.gpsStatus='active';state.gpsError=null;tick();render();},
+    function(err){state.gpsStatus='error';var m=['','GPS-Berechtigung verweigert.','Position nicht verfügbar.','GPS-Zeitüberschreitung.'];state.gpsError=m[err.code]||'GPS-Fehler.';render();},
+    {enableHighAccuracy:true,maximumAge:5000,timeout:15000}
+  );
+}
+
+function tick(){
+  if(state.lat===null||state.phase!=='nav')return;
+  var s=STATIONS[state.step];
+  state.distance=Math.round(haversine(state.lat,state.lng,s.lat,s.lng));
+  state.heading=calcHeading(state.lat,state.lng,s.lat,s.lng);
+  if(state.distance<=RADIUS){state.phase='arrived';state.nameRevealed=false;persist();}
+}
+
+function revealName(){state.nameRevealed=true;render();}
+function proceedToQuiz(){state.phase='quiz';state.selOpt=null;state.quizFb=null;state.attempts=0;persist();render();}
+
+function selectOption(idx){
+  if(state.quizFb==='correct')return;
+  var opt=STATIONS[state.step].quiz.options[idx];
+  state.selOpt=idx;
+  if(opt.correct){
+    state.quizFb='correct';render();
+    setTimeout(function(){
+      if(state.completedSteps.indexOf(state.step)<0)state.completedSteps.push(state.step);
+      state.pwJumped=false;
+      var finishedStep=state.step;
+      if(INTERMISSIONS[finishedStep]!==undefined){
+        state.phase='intermission';
+      } else if(state.step+1>=STATIONS.length){
+        state.phase='done';
+      } else {
+        state.step+=1;state.phase='nav';state.distance=null;state.heading=null;state.selOpt=null;state.quizFb=null;state.nameRevealed=false;
+      }
+      persist();render();
+    },1500);
+  } else {state.attempts+=1;state.quizFb='wrong';render();}
+}
+
+function continueAfterIntermission(){
+  // After last station intermission → poll; otherwise next nav
+  if(state.step+1>=STATIONS.length){
+    state.phase='poll';
+  } else {
+    state.step+=1;state.phase='nav';state.distance=null;state.heading=null;state.selOpt=null;state.quizFb=null;state.nameRevealed=false;
+  }
+  persist();render();
+}
+
+function votePoll(choice){
+  state.phase='birthday';state.pollChoice=choice;
+  persist();render();
+  setTimeout(launchConfetti,400);
+}
+
+// DRAWER
+function toggleOverview(){
+  state.showOv=!state.showOv;
+  var el=document.getElementById('drawerOverlay');
+  var btn=document.getElementById('menuBtn');
+  if(state.showOv){el.classList.add('open');btn.classList.add('active');renderOvList();}
+  else{el.classList.remove('open');btn.classList.remove('active');}
+}
+function handleDrawerClick(e){if(e.target===document.getElementById('drawerOverlay')||e.target.classList.contains('drawer-backdrop')){toggleOverview();}}
+function renderOvList(){
+  var total=STATIONS.length,html='';
+  for(var si=0;si<total;si++){
+    var iD=state.completedSteps.indexOf(si)>=0;
+    var iA=(si===state.step&&!iD);
+    var cls='ov-item'+(iD?' is-done':iA?' is-active':'');
+    var icon=iD?'✅':iA?'▶':'🔒';
+    var stxt=iD?'Abgeschlossen':iA?'Aktuelle Station':'Passwort erforderlich';
+    html+='<div class="'+cls+'" onclick="ovClick('+si+')">'
+        +'<div class="ov-num">'+(si+1)+'</div>'
+        +'<div class="ov-info"><div class="ov-name">Station '+(si+1)+'</div><div class="ov-status">'+stxt+'</div></div>'
+        +'<div class="ov-icon">'+icon+'</div></div>';
+  }
+  document.getElementById('ovList').innerHTML=html;
+}
+function ovClick(si){
+  var isDone=state.completedSteps.indexOf(si)>=0;
+  if(isDone)return;
+  openModal(si);
+}
+
+// MODAL
+function openModal(si){state.modalStep=si;state.modalPw='';state.modalErr='';renderModal();setTimeout(function(){var el=document.getElementById('pwInput');if(el)el.focus();},80);}
+function closeModal(){state.modalStep=null;document.getElementById('modal-root').innerHTML='';}
+function confirmPw(){
+  var entered=(state.modalPw||'').trim().toUpperCase();
+  var expected=STATIONS[state.modalStep].password.toUpperCase();
+  if(entered===expected){
+    var si=state.modalStep;
+    for(var i=0;i<si;i++){if(state.completedSteps.indexOf(i)<0)state.completedSteps.push(i);}
+    state.step=si;state.phase='quiz';state.pwJumped=true;
+    state.selOpt=null;state.quizFb=null;state.attempts=0;state.nameRevealed=false;
+    state.showOv=false;
+    document.getElementById('drawerOverlay').classList.remove('open');
+    document.getElementById('menuBtn').classList.remove('active');
+    closeModal();persist();render();
+  } else {
+    state.modalErr='Falsches Passwort. Nochmal versuchen.';
+    var inp=document.getElementById('pwInput');
+    if(inp){inp.classList.add('error');setTimeout(function(){inp.classList.remove('error');},500);}
+    renderModal();
+  }
+}
+function pwKey(e){if(e.key==='Enter')confirmPw();if(e.key==='Escape')closeModal();}
+function renderModal(){
+  if(state.modalStep===null){document.getElementById('modal-root').innerHTML='';return;}
+  var n=state.modalStep+1;
+  var html='<div class="modal-overlay" onclick="if(event.target===this)closeModal()">'
+    +'<div class="modal"><div class="modal-title">Station '+n+' entsperren</div>'
+    +'<div class="modal-sub">Passwort eingeben</div>'
+    +'<input id="pwInput" class="modal-input" type="text" maxlength="12" placeholder="PASSWORT" '
+    +'oninput="state.modalPw=this.value" onkeydown="pwKey(event)" autocomplete="off" spellcheck="false"/>'
+    +(state.modalErr?'<div class="modal-err">✗ '+state.modalErr+'</div>':'')
+    +'<div class="modal-btns">'
+    +'<button class="modal-btn cancel" onclick="closeModal()">Abbrechen</button>'
+    +'<button class="modal-btn ok" onclick="confirmPw()">Entsperren</button>'
+    +'</div></div></div>';
+  document.getElementById('modal-root').innerHTML=html;
+  var inp=document.getElementById('pwInput');
+  if(inp){inp.value=state.modalPw;inp.focus();}
+}
+
+// HELPERS
+function warmth(d){if(d===null)return['🧭','🧭','🧭'];if(d>500)return['🧊','🧊','🧊'];if(d>300)return['🧊','🧊','🔥'];if(d>100)return['🧊','🔥','🔥'];if(d>30)return['🔥','🔥','🔥'];return['🎯','🎯','🎯'];}
+function fmtD(d){if(d===null)return'—';return d>=1000?(d/1000).toFixed(1)+' km':d+' m';}
+function dCls(d){if(!d)return'';return d<=30?'close':d<=150?'near':'';}
+
+// CONFETTI
+function launchConfetti(){
+  var canvas=document.getElementById('confettiCanvas');
+  var ctx=canvas.getContext('2d');
+  canvas.width=window.innerWidth;canvas.height=window.innerHeight;
+  var pieces=[];var colors=['#e05090','#f0a030','#56c46a','#4090e0','#c040c0','#f0e030'];
+  for(var i=0;i<120;i++){pieces.push({x:Math.random()*canvas.width,y:-20-Math.random()*200,w:8+Math.random()*10,h:4+Math.random()*6,r:Math.random()*Math.PI*2,vx:(Math.random()-.5)*3,vy:2+Math.random()*4,vr:(Math.random()-.5)*.15,c:colors[Math.floor(Math.random()*colors.length)]});}
+  var start=Date.now();
+  function frame(){
+    var elapsed=Date.now()-start;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    pieces.forEach(function(p){
+      p.x+=p.vx;p.y+=p.vy;p.r+=p.vr;
+      ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.r);
+      ctx.fillStyle=p.c;ctx.globalAlpha=Math.max(0,1-(elapsed-1500)/1500);
+      ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);ctx.restore();
+    });
+    if(elapsed<3000)requestAnimationFrame(frame);
+    else ctx.clearRect(0,0,canvas.width,canvas.height);
+  }
+  requestAnimationFrame(frame);
+}
+
+// RENDER
+function render(){
+  var root=document.getElementById('root');
+  var total=STATIONS.length,done=state.completedSteps.length;
+  var station=STATIONS[Math.min(state.step,total-1)];
+  var html='';
+
+  // Progress dots
+  var noDots=['intermission','poll','birthday'].indexOf(state.phase)>=0;
+  if(!noDots){
+    var dots='';
+    for(var i=0;i<total;i++){
+      var dc=state.completedSteps.indexOf(i)>=0?'done':(i===state.step&&state.phase==='quiz')?'quiz':i===state.step?'active':'';
+      dots+='<div class="step-dot '+dc+'"></div>';
+    }
+    html+='<div class="progress-section">'
+        +'<div class="progress-label"><span>Fortschritt</span><span>'+done+' / '+total+'</span></div>'
+        +'<div class="progress-steps">'+dots+'</div>'
+        +'</div>';
+  }
+
+  // GPS pill (not on special screens)
+  var noGps=['intermission','poll','birthday','done'].indexOf(state.phase)>=0;
+  if(!noGps){
+    var gDot=state.gpsStatus==='active'?'active':state.gpsStatus==='error'?'error':'';
+    var gLbl=state.gpsStatus==='active'?'GPS aktiv'+(state.accuracy?' · ±'+state.accuracy+'m':''):state.gpsStatus==='error'?'GPS-Fehler':'GPS inaktiv';
+    html+='<div class="gps-status"><div class="gps-dot '+gDot+'"></div>'+gLbl+'</div>';
+  }
+  if(state.gpsError&&!noGps) html+='<div class="err-box">⚠️ '+state.gpsError+'</div>';
+
+  // ── INTERMISSION ──
+  if(state.phase==='intermission'){
+    var im=INTERMISSIONS[state.step];
+    html+='<div class="card inter-card"><div class="card-accent"></div>'
+        +'<span class="inter-emoji">'+im.emoji+'</span>'
+        +'<div class="inter-title">'+im.title+'</div>'
+        +'<button class="big-btn '+im.btnStyle+'" onclick="continueAfterIntermission()">'+im.btnLabel+' →</button>'
+        +'</div>';
+
+  // ── POLL ──
+  } else if(state.phase==='poll'){
+    html+='<div class="card"><div class="card-accent pink"></div>'
+        +'<div class="station-tag" style="color:#c0297b;background:#fdf0f7;border-color:rgba(192,41,123,.2)">🗳 Abstimmung</div>'
+        +'<div class="card-title">Wie geht es dir?</div>'
+        +'<div class="poll-options">'
+        +'<button class="poll-option" onclick="votePoll(\'A\')"><span class="poll-key">A</span><span class="poll-emoji">🤮</span></button>'
+        +'<button class="poll-option" onclick="votePoll(\'B\')"><span class="poll-key">B</span><span class="poll-emoji">😴</span></button>'
+        +'<button class="poll-option" onclick="votePoll(\'C\')"><span class="poll-key">C</span><span class="poll-emoji">🥳</span></button>'
+        +'</div></div>';
+
+  // ── BIRTHDAY ──
+  } else if(state.phase==='birthday'){
+    html+='<div class="card bday-card"><div class="card-accent pink"></div>'
+        +'<span class="bday-emoji">🎂</span><span class="bday-emoji" style="animation-delay:.15s">🎉</span><span class="bday-emoji" style="animation-delay:.3s">🎈</span>'
+        +'<div class="bday-title">Alles Gute zum<br>30. Geburtstag ❤️</div>'
+        +'<div class="bday-sub">Tour de Bierchen erfolgreich abgeschlossen!</div>'
+        +'</div>';
+
+  // ── DONE (fallback) ──
+  } else if(state.phase==='done'){
+    html+='<div class="card finish-card"><div class="card-accent green"></div>'
+        +'<span class="finish-icon">🍺</span>'
+        +'<div class="finish-title">Tour abgeschlossen!</div>'
+        +'<div class="finish-text">Alle '+total+' Stationen besucht. Prost! 🍻</div>'
+        +'</div>';
+
+  // ── NAV ──
+  } else if(state.phase==='nav'){
+    var em=warmth(state.distance);
+    var rot=state.heading!==null?state.heading:0;
+    var arrowC=state.heading!==null?'#b5712a':'#c0b090';
+    var arrow='<svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" style="transform:rotate('+rot+'deg);transition:transform .6s cubic-bezier(.34,1.56,.64,1)">'
+      +'<polygon points="14,3 19,20 14,17 9,20" fill="'+arrowC+'" opacity=".95"/>'
+      +'<polygon points="14,3 9,20 14,17 19,20" fill="'+arrowC+'" opacity=".3"/></svg>';
+    var dirTxt=state.heading!==null?dirName(state.heading):'Warte…';
+    html+='<div class="card"><div class="card-accent"></div>'
+        +'<div class="station-tag">⚑ '+(state.step+1)+' / '+total+' · Navigation</div>'
+        +'<div class="card-title">Station '+(state.step+1)+'</div>'
+        +'<div class="nav-hint">'+station.navHint+'</div>'
+        +'<div class="nav-widget">'
+        +'<div class="nav-left"><div class="dist-value '+dCls(state.distance)+'">'+fmtD(state.distance)+'</div>'
+        +'<div class="dist-label">Entfernung</div>'
+        +'<div class="warmth-row"><span>'+em[0]+'</span><span>'+em[1]+'</span><span>'+em[2]+'</span></div></div>'
+        +'<div class="compass-wrap"><div class="compass-ring">'
+        +'<div class="compass-labels"><span class="cl cl-n">N</span><span class="cl cl-e">O</span><span class="cl cl-s">S</span><span class="cl cl-w">W</span></div>'
+        +arrow+'</div><div class="compass-dir">'+dirTxt+'</div></div></div></div>';
+
+  // ── ARRIVED ──
+  } else if(state.phase==='arrived'){
+    html+='<div class="card"><div class="card-accent"></div>'
+        +'<div class="station-tag">📍 '+(state.step+1)+' / '+total+' · Angekommen</div>'
+        +'<div class="card-title">Station '+(state.step+1)+' erreicht!</div>'
+        +(state.nameRevealed
+          ? '<div class="reveal-name">🎉 '+station.name+'</div>'
+            +'<button class="reveal-btn" style="margin-top:14px" onclick="proceedToQuiz()">Weiter zum Rätsel →</button>'
+          : '<p style="font-size:.9rem;color:var(--text-2);margin-bottom:4px;line-height:1.6">Du hast das Ziel erreicht. Möchtest du wissen, wo du bist?</p>'
+            +'<button class="reveal-btn" onclick="revealName()">🔍 Ort enthüllen</button>'
+        )+'</div>';
+
+  // ── QUIZ ──
+  } else if(state.phase==='quiz'){
+    var quiz=station.quiz;
+    var uCls=state.quizFb==='correct'?' unlocked':'';
+    var opts='';
+    for(var j=0;j<quiz.options.length;j++){
+      var op=quiz.options[j];
+      var oc='quiz-option';
+      if(state.selOpt===j)oc+=state.quizFb==='correct'?' sel-correct':' sel-wrong';
+      var dis=state.quizFb==='correct'?'disabled':'';
+      opts+='<button class="'+oc+'" onclick="selectOption('+j+')" '+dis+'><span class="option-key">'+op.key+'</span><span>'+op.text+'</span></button>';
+    }
+    var fbHtml='';
+    if(state.quizFb==='wrong')fbHtml='<div class="feedback wrong">✗ Leider falsch'+(state.attempts>1?' (Versuch '+state.attempts+')':'')+'. Erneut versuchen!</div>';
+    else if(state.quizFb==='correct')fbHtml='<div class="feedback correct">✓ Richtig! '+(INTERMISSIONS[state.step]!==undefined?'Kurze Pause…':state.step+1<total?'Weiter zur nächsten Station…':'Fast fertig…')+'</div>';
+    html+='<div class="card quiz-card'+uCls+'"><div class="card-accent amber"></div>'
+        +'<div class="station-tag amber">🔐 '+(state.step+1)+' / '+total+' · Rätsel</div>'
+        +'<div class="card-title">'+station.name+'</div>'
+        +'<div class="quiz-question">'+quiz.question+'</div>'
+        +'<div class="quiz-options">'+opts+'</div>'+fbHtml+'</div>';
+  }
+
+  // Debug
+  if(state.debug&&station&&['nav','arrived','quiz'].indexOf(state.phase)>=0){
+    html+='<div class="dbg"><strong>Debug</strong><br>'
+        +'Pos: '+(state.lat?state.lat.toFixed(6):'?')+', '+(state.lng?state.lng.toFixed(6):'?')+'<br>'
+        +'Ziel: '+station.lat.toFixed(6)+', '+station.lng.toFixed(6)+'<br>'
+        +'Dist: '+state.distance+'m · R: '+RADIUS+'m<br>'
+        +'Heading: '+(state.heading?Math.round(state.heading)+'° '+dirName(state.heading):'?')+'<br>'
+        +'Phase: '+state.phase+' · Schritt: '+(state.step+1)+'/'+total+'</div>';
+  }
+
+  // Footer
+  html+='<div class="footer">';
+  html+='<button class="btn" onclick="startGPS()">🔄 GPS neu</button>';
+  html+='<button class="btn" onclick="state.debug=!state.debug;render()">⚙</button>';
+  html+='<button class="btn" onclick="doReset()">↺ Reset</button>';
+  html+='</div>';
+
+  root.innerHTML=html;
+}
+
+function doReset(){
+  if(!confirm('Fortschritt wirklich zurücksetzen?'))return;
+  state.step=0;state.phase='nav';state.completedSteps=[];state.pwJumped=false;
+  state.distance=null;state.heading=null;state.selOpt=null;state.quizFb=null;state.attempts=0;
+  state.showOv=false;state.nameRevealed=false;
+  sessionStorage.removeItem('tdb_v3');
+  render();
+}
+
+render();
+setTimeout(startGPS,400);
+</script>
+</body>
+</html>
